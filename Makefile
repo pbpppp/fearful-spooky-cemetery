@@ -4,7 +4,7 @@ BUILD   := build
 BOOTBIN := $(BUILD)/boot.bin
 FLOPPY  := $(BUILD)/boot.img
 
-.PHONY: all floppy run clean
+.PHONY: all floppy run shot clean
 
 all: floppy
 
@@ -30,6 +30,10 @@ floppy: $(FLOPPY)
 
 run: $(FLOPPY)
 	qemu-system-i386 -drive file=$(FLOPPY),format=raw,if=floppy -boot a -m 32
+
+# скриншот экрана виртуальной машины (для отчёта)
+shot: $(FLOPPY)
+	./tools/screenshot.sh $(FLOPPY) screenshots/boot.png
 
 clean:
 	rm -rf $(BUILD)
