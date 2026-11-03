@@ -1,7 +1,9 @@
 ASM     := fasm
 SRC     := src/boot.asm
+SRC_FNT := src/font16.asm
 BUILD   := build
 BOOTBIN := $(BUILD)/boot.bin
+FONTBIN := $(BUILD)/font16.bin
 FLOPPY  := $(BUILD)/boot.img
 
 .PHONY: all floppy run shot clean
@@ -12,7 +14,7 @@ $(BUILD):
 	mkdir -p $(BUILD)
 
 # загрузочный сектор: ровно 512 байт, иначе BIOS его не загрузит
-$(BOOTBIN): $(SRC) $(wildcard src/*.inc) | $(BUILD)
+$(BOOTBIN): $(SRC) | $(BUILD)
 	$(ASM) $(SRC) $@
 	@size=$$(stat -c%s $@); \
 	if [ $$size -gt 512 ]; then \
@@ -21,9 +23,19 @@ $(BOOTBIN): $(SRC) $(wildcard src/*.inc) | $(BUILD)
 		exit 1; \
 	fi
 
-# образ дискеты 1.44 МБ: сектор + нули
-$(FLOPPY): $(BOOTBIN)
-	cp $(BOOTBIN) $@
+# шрифт: отдельный сектор, который загрузчик читает через int 13h
+$(FONTBIN): $(SRC_FNT) | $(BUILD)
+	$(ASM) $(SRC_FNT) $@
+	@size=$$(stat -c%s $@); \
+	if [ $$size -ne 512 ]; then \
+		echo "font sector is $$size bytes, expected 512" >&2; \
+		rm -f $@; \
+		exit 1; \
+	fi
+
+# образ дискеты 1.44 МБ: загрузчик + сектор шрифта + нули
+$(FLOPPY): $(BOOTBIN) $(FONTBIN)
+	cat $(BOOTBIN) $(FONTBIN) > $@
 	truncate -s 1474560 $@
 
 floppy: $(FLOPPY)
