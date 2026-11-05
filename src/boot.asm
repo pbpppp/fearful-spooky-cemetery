@@ -91,6 +91,9 @@ start:
         mov     bl, 0Eh
         call    print_str
 
+; овал 120x56 в нижней половине экрана
+        call    draw_oval
+
         jmp     $               ; останов
 
 .nofont:
@@ -133,6 +136,55 @@ plot_pixel:
         mov     [es:di], al
         pop     di
         ret
+
+; ------------------------------------------------------------------
+; draw_oval: контур овала с центром (160,150), полуоси 60 и 28.
+;   Алгоритм средней точки (Bresenham) для эллипса: идём от середины
+;   фигуры наружу, на каждом шаге рисуем четыре симметричные точки.
+;   Состояние: ebx = dx, ebp = dy, esi = err (32 бита - без них
+;   погрешность не помещается).
+; ------------------------------------------------------------------
+draw_oval:
+        mov     ebx, -1492736   ; dx = 4*(1-a)*b*b
+        mov     ebp, 57600      ; dy = 4*a*a
+        mov     esi, -1435136   ; err = dx+dy
+.loop:
+        mov     al, 0Ah         ; цвет контура
+        mov     cx, [ov_x1]     ; (x1,y0)
+        mov     dx, [ov_y0]
+        call    plot_pixel
+        mov     cx, [ov_x0]     ; (x0,y0)
+        call    plot_pixel
+        mov     dx, [ov_y1]     ; (x0,y1)
+        call    plot_pixel
+        mov     cx, [ov_x1]     ; (x1,y1)
+        call    plot_pixel
+
+        mov     eax, esi
+        add     eax, eax        ; e2 = 2*err
+        cmp     eax, ebx        ; пока круто - шагаем по x
+        jl      .no_x
+        inc     word [ov_x0]
+        dec     word [ov_x1]
+        add     ebx, 25088      ; dx += 8*b*b
+        add     esi, ebx        ; err += dx
+.no_x:
+        cmp     eax, ebp        ; пока полого - шагаем по y
+        jg      .no_y
+        inc     word [ov_y0]
+        dec     word [ov_y1]
+        add     ebp, 115200     ; dy += 8*a*a
+        add     esi, ebp        ; err += dy
+.no_y:
+        mov     ax, [ov_x0]
+        cmp     ax, [ov_x1]
+        jbe     .loop
+        ret
+
+ov_x0:  dw 100                 ; левая точка
+ov_x1:  dw 220                 ; правая точка
+ov_y0:  dw 150                 ; нижняя точка (старт - середина фигуры)
+ov_y1:  dw 150                 ; верхняя точка
 
 ; ------------------------------------------------------------------
 ; print_str: вывести строку в точку (cx, dx)
