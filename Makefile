@@ -9,7 +9,7 @@ FONTBIN := $(BUILD)/font16.bin
 FLOPPY  := $(BUILD)/boot.img
 DISK    := $(BUILD)/disk.img
 
-.PHONY: all floppy mbr run run-hd shot clean
+.PHONY: all floppy mbr run run-hd shot shot-hd clean
 
 all: floppy mbr
 
@@ -68,6 +68,9 @@ run-hd: $(DISK)
 # скриншоты экрана виртуальной машины (для отчёта)
 shot: $(FLOPPY)
 	./tools/screenshot.sh $(FLOPPY) screenshots/boot.png
+
+shot-hd: $(DISK)
+	./tools/screenshot.sh $(DISK) screenshots/boot-hd.png 5 hd
 
 clean:
 	rm -rf $(BUILD)
